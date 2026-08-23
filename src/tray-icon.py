@@ -36,6 +36,9 @@ class MonitorControl:
         
         # Grab keyboard shortcuts
         self.grab_shortcuts()
+        
+        # Verifica e configura monitores no boot (5s após iniciar)
+        GLib.timeout_add(5000, self.ensure_monitors_extended)
     
     def create_menu(self):
         self.menu = Gtk.Menu()
@@ -76,6 +79,11 @@ class MonitorControl:
         toggle_both = Gtk.MenuItem(label="Alternância inteligente (Ctrl+Alt+3)")
         toggle_both.connect("button-release-event", lambda w, e: self.toggle_both_smart())
         self.menu.append(toggle_both)
+        
+        # Restaurar configuração padrão
+        restore_item = Gtk.MenuItem(label="Restaurar configuração padrão")
+        restore_item.connect("button-release-event", lambda w, e: self.ensure_monitors_extended())
+        self.menu.append(restore_item)
         
         self.menu.append(Gtk.SeparatorMenuItem())
         
@@ -160,6 +168,115 @@ class MonitorControl:
     def is_monitor_active(self, output):
         monitors = self.get_monitors()
         return output in ' '.join(monitors)
+    
+    def get_monitor_position(self, output):
+        """Retorna a posição (x, y) de um monitor via xrandr --query"""
+        output_cmd = self.run_command("xrandr --query")
+        for line in output_cmd.split('\n'):
+            if output in line and 'connected' in line:
+                # Parse: "eDP-1 connected 1920x1080+0+0"
+                import re
+                match = re.search(r'(\d+)x(\d+)\+(\d+)\+(\d+)', line)
+                if match:
+                    return (int(match.group(3)), int(match.group(4)))
+        return None
+    
+    def is_mirror_mode(self):
+        """Verifica se monitores estão em modo espelho (mesma posição)"""
+        nb_pos = self.get_monitor_position(self.notebook_output)
+        ext_pos = self.get_monitor_position(self.external_output)
+        return nb_pos is not None and ext_pos is not None and nb_pos == ext_pos
+    
+    def is_external_connected(self):
+        """Verifica se monitor externo está fisicamente conectado"""
+        output = self.run_command("xrandr --query")
+        for line in output.split('\n'):
+            if self.external_output in line and 'connected' in line:
+                return True
+        return False
+    
+    def ensure_monitors_extended(self):
+        """Garante que ambos monitores estejam ligados e estendidos (executa no boot)"""
+        nb_on = self.is_monitor_active(self.notebook_output)
+        ext_on = self.is_monitor_active(self.external_output)
+        ext_connected = self.is_external_connected()
+        
+        action_taken = False
+        message = ""
+        
+        if not ext_connected:
+            # Monitor externo não conectado - garante apenas notebook ligado
+            if not nb_on:
+                self.run_command(f"xrandr --output {self.notebook_output} --auto")
+                action_taken = True
+                message = "Monitor externo não detectado. Apenas monitor do notebook foi ativado."
+            else:
+                message = "Monitor externo não detectado. Monitor do notebook já está ativo."
+            action_taken = True
+        
+        elif not nb_on and not ext_on:
+            # Ambos desligados - liga ambos em modo estendido
+            self.run_command(f"xrandr --output {self.notebook_output} --auto --output {self.external_output} --auto --right-of {self.notebook_output}")
+            action_taken = True
+            message = "Ambos monitores estavam desligados. Configuração estendida aplicada."
+        
+        elif not nb_on:
+            # Notebook desligado - liga e estende
+            self.run_command(f"xrandr --output {self.notebook_output} --auto --output {self.external_output} --auto --right-of {self.notebook_output}")
+            action_taken = True
+            message = "Monitor do notebook estava desligado. Ligado e configurado em modo estendido."
+        
+        elif not ext_on:
+            # Externo desligado - liga e estende
+            self.run_command(f"xrandr --output {self.external_output} --auto --right-of {self.notebook_output}")
+            action_taken = True
+            message = "Monitor externo estava desligado. Ligado e configurado em modo estendido."
+        
+        else:
+            # Ambos ligados - verifica se está em modo mirror/clonado
+            if self.is_mirror_mode():
+                self.run_command(f"xrandr --output {self.notebook_output} --auto --output {self.external_output} --auto --right-of {self.notebook_output}")
+                action_taken = True
+                message = "Monitores estavam em modo espelho. Reconfigurado para modo estendido."
+        
+        if action_taken and message:
+            # Usa GLib.idle_add para garantir execução na thread principal
+            GLib.idle_add(self.show_dialog_auto_close, "Configuração de Monitores", message)
+        
+        # Retorna False para não repetir o timeout
+        return False
+    
+    def show_dialog_auto_close(self, title, message, timeout=5000):
+        """Dialog com auto-close após timeout (ms)"""
+        dialog = Gtk.MessageDialog(
+            transient_for=None,
+            modal=True,
+            message_type=Gtk.MessageType.INFO,
+            buttons=Gtk.ButtonsType.OK,
+            text=title
+        )
+        dialog.format_secondary_text(message)
+        
+        # Auto-close após timeout
+        def close_dialog():
+            dialog.response(Gtk.ResponseType.OK)
+            return False  # não repetir
+        
+        GLib.timeout_add(timeout, close_dialog)
+        dialog.run()
+        dialog.destroy()
+    
+    def show_dialog(self, title, message):
+        dialog = Gtk.MessageDialog(
+            transient_for=None,
+            modal=True,
+            message_type=Gtk.MessageType.INFO,
+            buttons=Gtk.ButtonsType.OK,
+            text=title
+        )
+        dialog.format_secondary_text(message)
+        dialog.run()
+        dialog.destroy()
     
     def notebook_on(self):
         if self.is_monitor_active(self.notebook_output):
