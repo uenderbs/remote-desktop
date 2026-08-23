@@ -61,7 +61,13 @@ notebook_on() {
         return 1
     fi
     
-    xrandr --output "$NOTEBOOK_OUTPUT" --auto
+    # Se monitor externo está ativo, configurar extensão
+    if external_is_any_on; then
+        xrandr --output "$NOTEBOOK_OUTPUT" --auto --output "$EXTERNAL_OUTPUT" --auto --right-of "$NOTEBOOK_OUTPUT"
+    else
+        xrandr --output "$NOTEBOOK_OUTPUT" --auto
+    fi
+    
     if [ $? -eq 0 ]; then
         log_success "Monitor interno ativado"
         return 0
@@ -109,7 +115,13 @@ external_on() {
         return 1
     fi
     
-    xrandr --output "$EXTERNAL_OUTPUT" --auto
+    # Se monitor interno está ativo, configurar extensão
+    if is_monitor_active "$NOTEBOOK_OUTPUT"; then
+        xrandr --output "$EXTERNAL_OUTPUT" --auto --right-of "$NOTEBOOK_OUTPUT"
+    else
+        xrandr --output "$EXTERNAL_OUTPUT" --auto
+    fi
+    
     if [ $? -eq 0 ]; then
         log_success "Monitor externo ativado"
         return 0
