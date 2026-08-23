@@ -15,9 +15,9 @@ Script para controle de monitores em notebooks com tela externa. Permite ligar/d
 
 | Atalho | Ação |
 |--------|------|
-| `Ctrl + Shift + 1` | Ativa/Desativa tela do notebook |
-| `Ctrl + Shift + 2` | Liga/Desliga monitor externo (DDC/CI) |
-| `Ctrl + Shift + 3` | Alternância inteligente (sincroniza ou alterna ambos) |
+| `Ctrl + Alt + 1` | Ativa/Desativa tela do notebook |
+| `Ctrl + Alt + 2` | Liga/Desliga monitor externo (DDC/CI) |
+| `Ctrl + Alt + 3` | Alternância inteligente (sincroniza ou alterna ambos) |
 
 ## Requisitos
 
