@@ -9,7 +9,7 @@
 
 # Configurações
 NOTEBOOK_OUTPUT="eDP-1"
-EXTERNAL_OUTPUT="HDMI-1"
+EXTERNAL_OUTPUT="HDMI-1-0"
 
 # Cores para saída
 RED='\033[0;31m'
