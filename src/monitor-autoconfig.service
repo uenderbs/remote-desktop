@@ -1,0 +1,13 @@
+[Unit]
+Description=Monitor Auto-Configuration
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/monitor-autoconfig
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
