@@ -1,0 +1,25 @@
+--- /tmp/crd-orig/opt/google/chrome-remote-desktop/chrome-remote-desktop	2026-07-29 21:33:21.000000000 -0300
++++ /opt/google/chrome-remote-desktop/chrome-remote-desktop	2026-08-23 02:55:04.377844671 -0300
+@@ -1541,8 +1541,20 @@
+     self.child_env["XDG_SESSION_TYPE"] = "x11"
+ 
+   def launch_session(self, *args, **kwargs):
+-    logging.info("Launching X server and X session.")
+-    super(XDesktop, self).launch_session(*args, **kwargs)
++    crd_session_mode = os.path.expanduser("~/.config/crd-session-mode")
++    if os.path.exists(crd_session_mode):
++      with open(crd_session_mode) as f:
++        display_num = int(f.read().strip())
++      logging.info("Using existing display :%d" % display_num)
++      self.child_env["DISPLAY"] = ":%d" % display_num
++      self.child_env["XAUTHORITY"] = os.path.expanduser("~/.Xauthority")
++      self.server_inhibitor.record_started(MINIMUM_PROCESS_LIFETIME,
++                                           args[1] if len(args) > 1 else 0)
++      self.session_inhibitor.record_started(MINIMUM_PROCESS_LIFETIME,
++                                            args[1] if len(args) > 1 else 0)
++    else:
++      logging.info("Launching X server and X session.")
++      super(XDesktop, self).launch_session(*args, **kwargs)
+ 
+   # Returns child environment not containing TMPDIR.
+   # Certain values of TMPDIR can break the X server (crbug.com/672684), so we
