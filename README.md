@@ -206,7 +206,24 @@ Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICE
 
 Este projeto foi desenvolvido com assistência de inteligência artificial. As seguintes ferramentas e modelos foram utilizados:
 
-### Ferramentas de IA
+### Windows (Script AutoHotkey)
+
+- **GPT-5.5**: Modelo de linguagem para desenvolvimento do script principal
+  - Provedor: OpenAI
+  - Uso: Desenvolvimento completo do script `ControleMonitor.ahk`, incluindo:
+    - Controle DDC/CI para monitores externos
+    - Atalhos de teclado
+    - Menu system tray
+    - Alternância inteligente entre monitores
+    - Inicialização com o Windows
+
+### Linux (Script Bash)
+
+- **opencode**: Interface de linha de comando para assistência de desenvolvimento
+  - Modelo: `opencode/mimo-v2.5-free`
+  - Uso: Criação do script `controle-monitor.sh` com funcionalidades equivalentes
+
+### Organização e Documentação
 
 - **opencode**: Interface de linha de comando para assistência de desenvolvimento
   - Modelo: `opencode/mimo-v2.5-free`
@@ -214,18 +231,24 @@ Este projeto foi desenvolvido com assistência de inteligência artificial. As s
 
 ### Modelos de IA Utilizados
 
-- **Mimo v2.5 Free**: Modelo de linguagem para geração e revisão de código
-  - Versão: mimo-v2.5-free
-  - Provedor: opencode
-  - Uso: Análise de código, sugestões de melhoria, criação de README
+| Modelo | Provedor | Uso |
+|--------|----------|-----|
+| GPT-5.5 | OpenAI | Desenvolvimento do script Windows (AutoHotkey) |
+| Mimo v2.5 Free | opencode | Desenvolvimento do script Linux, documentação, organização |
 
 ### Escopo da Assistência
 
-A IA foi utilizada para:
-- Revisão e organização do código existente
-- Criação da documentação completa (README)
-- Configuração do repositório Git
-- Sugestões de estrutura de pastas
-- Implementação de compatibilidade Linux
+**GPT-5.5 (Windows):**
+- Desenvolvimento completo do script AutoHotkey v2.0
+- Implementação de DDC/CI via API do Windows
+- Sistema de atalhos de teclado
+- Menu system tray com opções completas
+- Alternância inteligente entre monitores
+- Suporte a inicialização com o Windows
 
-O código fonte original foi desenvolvido por um humano, com assistência da IA para melhorias e documentação.
+**Mimo v2.5 Free (Linux e Documentação):**
+- Criação do script Bash equivalente para Linux
+- Documentação completa (README)
+- Configuração do repositório Git
+- Estruturação de pastas
+- Solução de problemas para ambos os sistemas
