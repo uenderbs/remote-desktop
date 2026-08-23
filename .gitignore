@@ -1,0 +1,24 @@
+# AutoHotkey
+*.ahk~
+*.ahk.bak
+*.exe
+*.a3x
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
