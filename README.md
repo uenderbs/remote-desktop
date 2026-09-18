@@ -114,14 +114,35 @@ Para configurar o script para iniciar automaticamente com o Windows:
 2. Selecione "Iniciar com o Windows"
 3. O item ficará marcado quando ativado
 
-### Linux
+### Linux - Interface Grafica (System Tray)
 
-Execute o script:
+1. Instale as dependencias:
+   ```bash
+   # Debian/Ubuntu
+   sudo apt install python3-gi gir1.2-ayatanaappindicator3-0.1
+
+   # Arch Linux
+   sudo pacman - python-gobject libayatana-appindicator
+
+   # Fedora
+   sudo dnf install python3-gobject ayatana-appindicator3-gtk3
+   ```
+
+2. Execute o script:
+   ```bash
+   python3 src/tray-icon.py
+   ```
+
+3. Um icone de monitor aparecera na bandeja do sistema (proximo ao relogio). Clique com o botao direito para acessar o menu.
+
+### Linux - Linha de Comando
+
+Execute o script bash:
 ```bash
 ~/.local/bin/controle-monitor.sh
 ```
 
-O script ficará em segundo plano e responderá aos atalhos de teclado.
+O script ficara em segundo plano e respondera aos atalhos de teclado.
 
 ## Comandos Linux
 
@@ -170,7 +191,10 @@ xrandr --output eDP-1 --auto --output HDMI-1 --same-as eDP-1
 controle-monitor/
 ├── src/
 │   ├── ControleMonitor.ahk    # Script principal (Windows)
-│   └── controle-monitor.sh    # Script principal (Linux)
+│   ├── controle-monitor.sh    # Script principal (Linux - CLI)
+│   ├── tray-icon.py           # Interface grafica (Linux - System Tray)
+│   ├── monitor-icon.svg       # Icone do monitor (vetorial)
+│   └── monitor-icon.png       # Icone do monitor (raster)
 ├── docs/
 │   └── screenshots/           # Capturas de tela (opcional)
 ├── .gitignore
@@ -186,7 +210,9 @@ controle-monitor/
 - **API Windows Display**: `DisplaySwitch.exe` para controle de tela
 
 ### Linux
-- **Bash**: Shell script para automação
+- **Bash**: Shell script para automação (CLI)
+- **Python 3**: Interface grafica com system tray
+- **AyatanaAppIndicator3**: Indicador de bandeja do sistema
 - **xrandr**: Ferramenta de configuração de display
 - **ddcutil**: Ferramenta para comunicação DDC/CI no Linux
 
