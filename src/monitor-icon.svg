@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="screenGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4a90d9;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2c5f8a;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Monitor frame -->
+  <rect x="6" y="8" width="52" height="38" rx="3" ry="3" fill="#3a3a3a" stroke="#2a2a2a" stroke-width="1"/>
+  <!-- Screen -->
+  <rect x="10" y="12" width="44" height="30" rx="1" ry="1" fill="url(#screenGrad)"/>
+  <!-- Screen shine -->
+  <rect x="10" y="12" width="44" height="15" rx="1" ry="1" fill="#5aa0e9" opacity="0.3"/>
+  <!-- Stand -->
+  <rect x="26" y="46" width="12" height="6" fill="#3a3a3a"/>
+  <!-- Base -->
+  <rect x="20" y="52" width="24" height="4" rx="2" ry="2" fill="#3a3a3a" stroke="#2a2a2a" stroke-width="0.5"/>
+  <!-- Power LED -->
+  <circle cx="32" cy="44" r="1.5" fill="#4ade80"/>
+</svg>

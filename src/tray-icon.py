@@ -2,9 +2,11 @@
 
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GLib
+gi.require_version('AyatanaAppIndicator3', '0.1')
+from gi.repository import Gtk, GLib, AyatanaAppIndicator3
 import subprocess
 import os
+import threading
 
 class MonitorTray:
     def __init__(self):
@@ -12,16 +14,18 @@ class MonitorTray:
         self.notebook_output = "eDP-1"
         self.external_output = "HDMI-1-0"
         
-        # Create StatusIcon
-        self.status_icon = Gtk.StatusIcon()
-        self.status_icon.set_from_icon_name("display-display-symbolic")
-        self.status_icon.set_tooltip_text("Controle de Monitores")
-        self.status_icon.connect("popup-menu", self.on_popup_menu)
-        self.status_icon.connect("activate", self.on_activate)
-        self.status_icon.set_visible(True)
+        # Create AppIndicator
+        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "monitor-icon.png")
+        self.indicator = AyatanaAppIndicator3.Indicator.new(
+            "controle-monitor",
+            icon_path,
+            AyatanaAppIndicator3.IndicatorCategory.APPLICATION_STATUS
+        )
+        self.indicator.set_status(AyatanaAppIndicator3.IndicatorStatus.ACTIVE)
         
         # Create menu
         self.create_menu()
+        self.indicator.set_menu(self.menu)
         
         # Ensure monitors configured on startup
         GLib.timeout_add(5000, self.ensure_monitors_extended)
@@ -31,7 +35,7 @@ class MonitorTray:
         
         # Notebook submenu
         notebook_menu = Gtk.Menu()
-        notebook_item = Gtk.MenuItem(label="💻 Monitor interno (notebook)")
+        notebook_item = Gtk.MenuItem(label="Monitor interno (notebook)")
         notebook_item.set_submenu(notebook_menu)
         
         nb_on = Gtk.MenuItem(label="Ativar tela do notebook")
@@ -47,7 +51,7 @@ class MonitorTray:
         
         # External submenu
         external_menu = Gtk.Menu()
-        external_item = Gtk.MenuItem(label="🖥️ Monitor externo (HDMI)")
+        external_item = Gtk.MenuItem(label="Monitor externo (HDMI)")
         external_item.set_submenu(external_menu)
         
         ext_on = Gtk.MenuItem(label="Ligar monitor externo")
@@ -62,35 +66,35 @@ class MonitorTray:
         self.menu.append(Gtk.SeparatorMenuItem())
         
         # Toggle both
-        toggle_both = Gtk.MenuItem(label="🔄 Alternância inteligente (Ctrl+Shift+3)")
+        toggle_both = Gtk.MenuItem(label="Alternancia inteligente (Ctrl+Shift+3)")
         toggle_both.connect("activate", lambda w: self.toggle_both_smart())
         self.menu.append(toggle_both)
         
         self.menu.append(Gtk.SeparatorMenuItem())
         
         # Restore config
-        restore_item = Gtk.MenuItem(label="⚙️ Restaurar configuração padrão")
+        restore_item = Gtk.MenuItem(label="Restaurar configuracao padrao")
         restore_item.connect("activate", lambda w: self.ensure_monitors_extended())
         self.menu.append(restore_item)
         
         self.menu.append(Gtk.SeparatorMenuItem())
         
         # Startup toggle
-        self.startup_item = Gtk.MenuItem(label="🪟 Iniciar com o sistema")
+        self.startup_item = Gtk.MenuItem(label="Iniciar com o sistema")
         self.startup_item.connect("activate", lambda w: self.toggle_startup())
         self.menu.append(self.startup_item)
         
         self.menu.append(Gtk.SeparatorMenuItem())
         
         # Help
-        help_item = Gtk.MenuItem(label="❓ Ajuda")
+        help_item = Gtk.MenuItem(label="Ajuda")
         help_item.connect("activate", lambda w: self.show_help())
         self.menu.append(help_item)
         
         self.menu.append(Gtk.SeparatorMenuItem())
         
         # Quit
-        quit_item = Gtk.MenuItem(label="❌ Sair")
+        quit_item = Gtk.MenuItem(label="Sair")
         quit_item.connect("activate", lambda w: self.quit())
         self.menu.append(quit_item)
         
@@ -103,6 +107,17 @@ class MonitorTray:
             return result.stdout.strip()
         except Exception as e:
             return str(e)
+    
+    def run_command_async(self, cmd, callback=None):
+        def worker():
+            try:
+                result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+                if callback:
+                    GLib.idle_add(callback, result.stdout.strip())
+            except Exception as e:
+                if callback:
+                    GLib.idle_add(callback, str(e))
+        threading.Thread(target=worker, daemon=True).start()
     
     def get_monitors(self):
         output = self.run_command("xrandr --listmonitors")
@@ -150,15 +165,15 @@ class MonitorTray:
             if not nb_on:
                 self.run_command(f"xrandr --output {self.notebook_output} --auto")
                 action_taken = True
-                message = "Monitor externo não detectado. Monitor do notebook ativado."
+                message = "Monitor externo nao detectado. Monitor do notebook ativado."
             else:
-                message = "Monitor externo não detectado. Monitor do notebook já ativo."
+                message = "Monitor externo nao detectado. Monitor do notebook ja ativo."
             action_taken = True
         
         elif not nb_on and not ext_on:
             self.run_command(f"xrandr --output {self.notebook_output} --auto --output {self.external_output} --auto --right-of {self.notebook_output}")
             action_taken = True
-            message = "Ambos monitores estavam desligados. Configuração estendida aplicada."
+            message = "Ambos monitores estavam desligados. Configuracao estendida aplicada."
         
         elif not nb_on:
             self.run_command(f"xrandr --output {self.notebook_output} --auto --output {self.external_output} --auto --right-of {self.notebook_output}")
@@ -177,12 +192,11 @@ class MonitorTray:
                 message = "Monitores estavam em modo espelho. Reconfigurado para modo estendido."
         
         if action_taken and message:
-            GLib.idle_add(self.show_notification, "Configuração de Monitores", message)
+            GLib.idle_add(self.show_notification, "Configuracao de Monitores", message)
         
-        return False  # Don't repeat
+        return False
     
     def show_notification(self, title, message):
-        """Show notification using notify-send"""
         try:
             subprocess.run(['notify-send', '-t', '5000', title, message], check=False)
         except:
@@ -200,19 +214,9 @@ class MonitorTray:
         dialog.run()
         dialog.destroy()
     
-    def on_popup_menu(self, icon, button, activate_time):
-        self.menu.popup_at_pointer(None)
-    
-    def on_activate(self, icon):
-        monitors = self.get_monitors()
-        info = "Monitores ativos:\n\n"
-        for m in monitors:
-            info += f"• {m}\n"
-        self.show_dialog("Status dos Monitores", info)
-    
     def notebook_on(self):
         if self.is_monitor_active(self.notebook_output):
-            self.show_dialog("Aviso", "Monitor interno já está ativo")
+            self.show_dialog("Aviso", "Monitor interno ja esta ativo")
             return
         
         if self.is_monitor_active(self.external_output):
@@ -220,20 +224,22 @@ class MonitorTray:
         else:
             cmd = f"xrandr --output {self.notebook_output} --auto"
         
-        self.run_command(cmd)
-        self.show_notification("Sucesso", "Monitor interno ativado")
+        def on_done(result):
+            self.show_notification("Sucesso", "Monitor interno ativado")
+        self.run_command_async(cmd, on_done)
     
     def notebook_off(self):
         if not self.is_monitor_active(self.notebook_output):
-            self.show_dialog("Aviso", "Monitor interno já está desativado")
+            self.show_dialog("Aviso", "Monitor interno ja esta desativado")
             return
         
-        self.run_command(f"xrandr --output {self.notebook_output} --off")
-        self.show_notification("Sucesso", "Monitor interno desativado")
+        def on_done(result):
+            self.show_notification("Sucesso", "Monitor interno desativado")
+        self.run_command_async(f"xrandr --output {self.notebook_output} --off", on_done)
     
     def external_on(self):
         if self.is_monitor_active(self.external_output):
-            self.show_dialog("Aviso", "Monitor externo já está ativo")
+            self.show_dialog("Aviso", "Monitor externo ja esta ativo")
             return
         
         if self.is_monitor_active(self.notebook_output):
@@ -241,16 +247,18 @@ class MonitorTray:
         else:
             cmd = f"xrandr --output {self.external_output} --auto"
         
-        self.run_command(cmd)
-        self.show_notification("Sucesso", "Monitor externo ativado")
+        def on_done(result):
+            self.show_notification("Sucesso", "Monitor externo ativado")
+        self.run_command_async(cmd, on_done)
     
     def external_off(self):
         if not self.is_monitor_active(self.external_output):
-            self.show_dialog("Aviso", "Monitor externo já está desativado")
+            self.show_dialog("Aviso", "Monitor externo ja esta desativado")
             return
         
-        self.run_command(f"xrandr --output {self.external_output} --off")
-        self.show_notification("Sucesso", "Monitor externo desativado")
+        def on_done(result):
+            self.show_notification("Sucesso", "Monitor externo desativado")
+        self.run_command_async(f"xrandr --output {self.external_output} --off", on_done)
     
     def toggle_both_smart(self):
         ext_on = self.is_monitor_active(self.external_output)
@@ -258,15 +266,14 @@ class MonitorTray:
         
         if ext_on != nb_on:
             if ext_on and not nb_on:
-                self.run_command(f"xrandr --output {self.notebook_output} --auto --output {self.external_output} --auto --right-of {self.notebook_output}")
+                self.run_command_async(f"xrandr --output {self.notebook_output} --auto --output {self.external_output} --auto --right-of {self.notebook_output}")
             else:
-                self.run_command(f"xrandr --output {self.notebook_output} --off")
+                self.run_command_async(f"xrandr --output {self.notebook_output} --off")
         else:
             if ext_on and nb_on:
-                self.run_command(f"xrandr --output {self.notebook_output} --off")
-                self.run_command(f"xrandr --output {self.external_output} --off")
+                self.run_command_async(f"xrandr --output {self.notebook_output} --off && xrandr --output {self.external_output} --off")
             else:
-                self.run_command(f"xrandr --output {self.notebook_output} --auto --output {self.external_output} --auto --right-of {self.notebook_output}")
+                self.run_command_async(f"xrandr --output {self.notebook_output} --auto --output {self.external_output} --auto --right-of {self.notebook_output}")
     
     def toggle_startup(self):
         autostart_dir = os.path.expanduser("~/.config/autostart")
@@ -274,7 +281,7 @@ class MonitorTray:
         
         if os.path.exists(desktop_file):
             os.remove(desktop_file)
-            self.show_notification("Informação", "Inicialização automática desativada")
+            self.show_notification("Informacao", "Inicializacao automatica desativada")
         else:
             os.makedirs(autostart_dir, exist_ok=True)
             content = f"""[Desktop Entry]
@@ -282,13 +289,13 @@ Type=Application
 Name=Controle de Monitores
 Comment=Controle de monitores notebook/externo
 Exec={os.path.expanduser("~/.local/bin/controle-monitor-tray")}
-Icon=display-display-symbolic
+Icon={os.path.join(os.path.dirname(os.path.abspath(__file__)), "monitor-icon.png")}
 Terminal=false
 Categories=Utility;
 """
             with open(desktop_file, 'w') as f:
                 f.write(content)
-            self.show_notification("Informação", "Inicialização automática ativada")
+            self.show_notification("Informacao", "Inicializacao automatica ativada")
         
         self.update_startup_status()
     
@@ -297,29 +304,29 @@ Categories=Utility;
         desktop_file = os.path.join(autostart_dir, "controle-monitor.desktop")
         
         if os.path.exists(desktop_file):
-            self.startup_item.set_label("✓ Iniciar com o sistema")
+            self.startup_item.set_label("* Iniciar com o sistema")
         else:
-            self.startup_item.set_label("🪟 Iniciar com o sistema")
+            self.startup_item.set_label("Iniciar com o sistema")
     
     def show_help(self):
-        help_text = """INSTRUÇÕES – CONTROLE DE MONITORES
+        help_text = """INSTRUCOES - CONTROLE DE MONITORES
 
 Atalhos globais (funcionam sempre):
-• Ctrl + Shift + 1  → Ativa/Desativa tela do notebook
-• Ctrl + Shift + 2  → Liga/Desliga monitor externo
-• Ctrl + Shift + 3  → Alternância inteligente
+- Ctrl + Shift + 1  -> Ativa/Desativa tela do notebook
+- Ctrl + Shift + 2  -> Liga/Desliga monitor externo
+- Ctrl + Shift + 3  -> Alternancia inteligente
 
-Menu (ícone na bandeja):
-• Monitor interno: Ativar / Desativar tela
-• Monitor externo: Ligar / Desligar
-• Alternância inteligente: Sincroniza ou alterna ambos
-• Restaurar configuração padrão: Força modo estendido
+Menu (icone na bandeja):
+- Monitor interno: Ativar / Desativar tela
+- Monitor externo: Ligar / Desligar
+- Alternancia inteligente: Sincroniza ou alterna ambos
+- Restaurar configuracao padrao: Forca modo estendido
 
-Observações:
-• Alguns monitores não ligam via software em modo economia.
-• Se não ligar, segure botão físico do monitor."""
+Observacoes:
+- Alguns monitores nao ligam via software em modo economia.
+- Se nao ligar, segure botao fisico do monitor."""
         
-        self.show_dialog("Ajuda – Controle de Monitores", help_text)
+        self.show_dialog("Ajuda - Controle de Monitores", help_text)
     
     def quit(self):
         Gtk.main_quit()
