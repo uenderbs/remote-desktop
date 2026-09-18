@@ -1,0 +1,16 @@
+[Unit]
+Description=Chrome Remote Desktop for <YOUR_USERNAME>
+After=network.target
+
+[Service]
+Type=simple
+User=<YOUR_USERNAME>
+PAMName=chrome-remote-desktop
+TTYPath=/dev/chrome-remote-desktop
+ExecStart=/opt/google/chrome-remote-desktop/start-active.sh
+KillMode=control-group
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
